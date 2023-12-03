@@ -3,10 +3,9 @@
 #include <math.h>
 
 #include "Camera.h"
+#include "TextureLoader.h"
 
 #include <glfw3.h>
-
-#include <iostream>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -67,38 +66,6 @@ const GLchar* FragmentShader =
 
 void CreateVBO()
 {
-	float vertices2[] = {
-	 0.5f,  1.0f, 0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 0
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // 1
-
-	 0.5f,  1.0f, 0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 1
-	 1.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // 3
-
-	 0.5f,  1.0f, 0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 0.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 2
-	 1.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // 3
-
-	 0.5f,  1.0f, 0.5f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 0
-	 0.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // 2
-
-
-	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 0
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 1
-	 0.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // 2
-	 1.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f, // 3
-	};
-	unsigned int indices2[] = {
-	0,1, 2,
-	3,4,5,
-	6,7,8,
-	9,10,11,
-	12,13,14,
-	13,14,15,
-	};
-
 	float vertices[] = {
 	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 0
 	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 1
@@ -249,56 +216,6 @@ void DestroyShaders()
 	glDeleteProgram(ProgramId);
 }
 
-void CreateTextures(const std::string& strExePath)
-{
-	// load and create a texture
-	// -------------------------
-	// texture 1
-	// ---------
-	glGenTextures(1, &texture1Location);
-	glBindTexture(GL_TEXTURE_2D, texture1Location);
-	// set the texture wrapping parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// set texture filtering parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load image, create texture and generate mipmaps
-	int width, height, nrChannels;
-	stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-	unsigned char* data = stbi_load((strExePath + "\\stones.jpg").c_str(), &width, &height, &nrChannels, 0);
-	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else {
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data);
-	// texture 2
-	// ---------
-	glGenTextures(1, &texture2Location);
-	glBindTexture(GL_TEXTURE_2D, texture2Location);
-	// set the texture wrapping parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	// set texture filtering parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// load image, create texture and generate mipmaps
-	data = stbi_load((strExePath + "\\Bricks.jpg").c_str(), &width, &height, &nrChannels, 0);
-	if (stbi_failure_reason())
-		std::cout << stbi_failure_reason();
-	if (data) {
-		// note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else {
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data);
-}
 void Initialize(const std::string& strExePath)
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // culoarea de fond a ecranului
@@ -312,7 +229,11 @@ void Initialize(const std::string& strExePath)
 
 	CreateVBO();
 	CreateShaders();
-	CreateTextures(strExePath);
+	/*CreateTextures(strExePath);*/
+	texture1Location = TextureLoader::CreateTexture("../Resources/Bricks.jpg");
+	texture2Location = TextureLoader::CreateTexture("../Resources/Stones.jpg");
+
+	
 
 	// Create camera
 	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.5, 0.5, 10));
