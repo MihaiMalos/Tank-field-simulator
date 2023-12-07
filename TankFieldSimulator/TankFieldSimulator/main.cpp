@@ -216,7 +216,7 @@ void DestroyShaders()
 	glDeleteProgram(ProgramId);
 }
 
-void Initialize(const std::string& strExePath)
+void Initialize()
 {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // culoarea de fond a ecranului
 	//glEnable(GL_CULL_FACE);
@@ -229,7 +229,6 @@ void Initialize(const std::string& strExePath)
 
 	CreateVBO();
 	CreateShaders();
-	/*CreateTextures(strExePath);*/
 	texture1Location = TextureLoader::CreateTexture("../Resources/Bricks.jpg");
 	texture2Location = TextureLoader::CreateTexture("../Resources/Stones.jpg");
 
@@ -345,7 +344,7 @@ int main(int argc, char** argv)
 
 	glewInit();
 
-	Initialize(strExePath);
+	Initialize();
 
 	// render loop
 	while (!glfwWindowShouldClose(window)) {
