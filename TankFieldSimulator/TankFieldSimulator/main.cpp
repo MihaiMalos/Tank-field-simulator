@@ -1,11 +1,23 @@
-#include <stdlib.h> // necesare pentru citirea shader-elor
+#include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
+#include <math.h> 
+
+#include <GL/glew.h>
+
+#define GLM_FORCE_CTOR_INIT 
+#include <GLM.hpp>
+#include <gtc/matrix_transform.hpp>
+#include <gtc/type_ptr.hpp>
+
+#include <glfw3.h>
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include "Camera.h"
 #include "TextureLoader.h"
-
-#include <glfw3.h>
+#include "Shader.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -18,286 +30,11 @@
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-GLuint VAO, VBO, EBO;
-unsigned int VertexShaderId, FragmentShaderId, ProgramId;
-GLuint ProjMatrixLocation, ViewMatrixLocation, WorldMatrixLocation, mixValueLocation;
-unsigned int texture1Location, texture2Location;
-
-float mixValue;
-
-
 Camera* pCamera = nullptr;
 
-// Shader-ul de varfuri / Vertex shader (este privit ca un sir de caractere)
-const GLchar* VertexShader =
-{
-   "#version 330\n"\
-   "layout (location = 0) in vec3 aPos;\n"\
-   "layout (location = 1) in vec4 aColor;\n"\
-   "layout (location = 2) in vec2 aTexCoord;\n"\
-   "out vec4 ourColor;\n"\
-   "out vec2 TexCoord;\n"\
-   "uniform mat4 ProjMatrix;\n"\
-   "uniform mat4 ViewMatrix;\n"\
-   "uniform mat4 WorldMatrix;\n"\
-   "void main()\n"\
-   "{\n"\
-   "gl_Position = ProjMatrix * ViewMatrix * WorldMatrix * vec4(aPos, 1.0);\n"\
-   "ourColor = aColor;\n"\
-   "TexCoord = vec2(aTexCoord.x, aTexCoord.y);\n"\
-   "}\n"
-};
-// Shader-ul de fragment / Fragment shader (este privit ca un sir de caractere)
-const GLchar* FragmentShader =
-{
-   "#version 330\n"\
-   "out vec4 FragColor;\n"\
-   "in vec4 ourColor;\n"\
-   "in vec2 TexCoord;\n"\
-   "uniform float mixValue;\n"\
-   "uniform sampler2D texture1;\n"\
-   "uniform sampler2D texture2;\n"\
-   "void main()\n"\
-   "{\n"\
-   "  FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), mixValue) * ourColor;\n"\
-   "}\n"
-};
-
-
-void CreateVBO()
-{
-	float vertices[] = {
-	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 0
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 1
-	 0.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 2
-
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 1
-	 0.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 2
-	 1.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 1.0f, // 3
-
-	 0.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // 0
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // 1
-
-	 0.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // 1
-	 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f, // 5
-
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 1
-	 1.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,    1.0f, 0.0f, // 3
-	 1.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 7
-
-	 1.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 1
-	 1.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 7
-	 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f, // 5
-
-	0.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,     1.0f, 1.0f, // 2
-	 1.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,    1.0f, 0.0f, // 3
-	 0.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 6
-
-	1.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,     1.0f, 0.0f, // 3
-	 0.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 6
-	 1.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 1.0f, // 7
-
-	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 0
-	 0.0f,  0.0f, 1.0f,  1.0f, 1.0f, 1.0f,    1.0f, 0.0f, // 2
-	 0.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 6
-
-	 0.0f,  0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 0
-	 0.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 6
-	 0.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f, // 4
-
-	 0.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 0.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    1.0f, 0.0f, // 6
-	 1.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 7
-
-	 0.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // 4
-	 1.0f,  1.0f, 1.0f,  1.0f, 1.0f, 1.0f,    0.0f, 0.0f, // 7
-	 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.0f, 1.0f, // 5
-	};
-
-	unsigned int indices[] = {
-		0,1,2,
-		3,4,5,
-		6,7,8,
-		9,10,11,
-		12,13,14,
-		15,16,17,
-		18,19,20,
-		21,22,23,
-		24,25,26,
-		27,28,29,
-		30,31,32,
-		33,34,35,
-	};
-
-
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
-	glBindVertexArray(VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	// color attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-	// texture coord attribute
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
-}
-void DestroyVBO()
-{
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
-}
-void CreateShaders()
-{
-	VertexShaderId = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(VertexShaderId, 1, &VertexShader, NULL);
-	glCompileShader(VertexShaderId);
-
-	FragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(FragmentShaderId, 1, &FragmentShader, NULL);
-	glCompileShader(FragmentShaderId);
-
-	ProgramId = glCreateProgram();
-	glAttachShader(ProgramId, VertexShaderId);
-	glAttachShader(ProgramId, FragmentShaderId);
-	glLinkProgram(ProgramId);
-
-	GLint Success = 0;
-	GLchar ErrorLog[1024] = { 0 };
-
-	glGetProgramiv(ProgramId, GL_LINK_STATUS, &Success);
-	if (Success == 0) {
-		glGetProgramInfoLog(ProgramId, sizeof(ErrorLog), NULL, ErrorLog);
-		fprintf(stderr, "Error linking shader program: '%s'\n", ErrorLog);
-		exit(1);
-	}
-
-	glValidateProgram(ProgramId);
-	glGetProgramiv(ProgramId, GL_VALIDATE_STATUS, &Success);
-	if (!Success) {
-		glGetProgramInfoLog(ProgramId, sizeof(ErrorLog), NULL, ErrorLog);
-		fprintf(stderr, "Invalid shader program: '%s'\n", ErrorLog);
-		exit(1);
-	}
-
-	glUseProgram(ProgramId);
-
-	ProjMatrixLocation = glGetUniformLocation(ProgramId, "ProjMatrix");
-	ViewMatrixLocation = glGetUniformLocation(ProgramId, "ViewMatrix");
-	WorldMatrixLocation = glGetUniformLocation(ProgramId, "WorldMatrix");
-	mixValueLocation = glGetUniformLocation(ProgramId, "mixValue");
-
-	glUniform1i(glGetUniformLocation(ProgramId, "texture1"), 0);
-	glUniform1i(glGetUniformLocation(ProgramId, "texture2"), 1);
-}
-void DestroyShaders()
-{
-	glUseProgram(0);
-
-	glDetachShader(ProgramId, VertexShaderId);
-	glDetachShader(ProgramId, FragmentShaderId);
-
-	glDeleteShader(FragmentShaderId);
-	glDeleteShader(VertexShaderId);
-
-	glDeleteProgram(ProgramId);
-}
-
-void Initialize()
-{
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // culoarea de fond a ecranului
-	//glEnable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_COLOR_MATERIAL);
-	glDisable(GL_LIGHTING);
-
-	//glFrontFace(GL_CCW);
-	//glCullFace(GL_BACK);
-
-	CreateVBO();
-	CreateShaders();
-	texture1Location = TextureLoader::CreateTexture("../Resources/Bricks.jpg");
-	texture2Location = TextureLoader::CreateTexture("../Resources/Stones.jpg");
-
-	
-
-	// Create camera
-	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.5, 0.5, 10));
-}
-
-void RenderCube()
-{
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-	int indexArraySize;
-	glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexArraySize);
-	glDrawElements(GL_TRIANGLES, indexArraySize / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
-}
-
-void RenderFunction()
-{
-	glm::vec3 cubePositions[] = {
-	 glm::vec3(0.0f,  0.0f,   0.0f),
-	 glm::vec3(-5.0f,  5.0f,  5.0f),
-	 glm::vec3(-5.0f, -5.0f,  5.0f),
-	 glm::vec3(5.0f, -5.0f,  5.0f),
-	 glm::vec3(5.0f,  5.0f,  5.0f),
-	 glm::vec3(-5.0f,  5.0f, -5.0f),
-	 glm::vec3(-5.0f, -5.0f, -5.0f),
-	 glm::vec3(5.0f, -5.0f, -5.0f),
-	 glm::vec3(5.0f,  5.0f, -5.0f),
-	};
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glUseProgram(ProgramId);
-
-	// bind textures on corresponding texture units
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture1Location);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texture2Location);
-
-	glm::mat4 projection = pCamera->GetProjectionMatrix();
-	glUniformMatrix4fv(ProjMatrixLocation, 1, GL_FALSE, glm::value_ptr(projection));
-
-	glm::mat4 view = pCamera->GetViewMatrix();
-	glUniformMatrix4fv(ViewMatrixLocation, 1, GL_FALSE, glm::value_ptr(view));
-
-	glUniform1f(mixValueLocation, mixValue);
-
-	glBindVertexArray(VAO);
-
-	for (unsigned int i = 0; i < sizeof(cubePositions) / sizeof(cubePositions[0]); i++) {
-		// calculate the model matrix for each object and pass it to shader before drawing
-		glm::mat4 worldTransf = glm::translate(glm::mat4(1.0), cubePositions[i]);
-		glUniformMatrix4fv(WorldMatrixLocation, 1, GL_FALSE, glm::value_ptr(worldTransf));
-
-		RenderCube();
-	}
-}
-
-void Cleanup()
-{
-	DestroyShaders();
-	DestroyVBO();
-
-	delete pCamera;
-}
+void renderScene(const Shader& shader);
+void renderCube();
+void renderFloor();
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -311,21 +48,12 @@ double lastFrame = 0.0f;
 
 int main(int argc, char** argv)
 {
-	std::string strFullExeFileName = argv[0];
-	std::string strExePath;
-	const size_t last_slash_idx = strFullExeFileName.rfind('\\');
-	if (std::string::npos != last_slash_idx) {
-		strExePath = strFullExeFileName.substr(0, last_slash_idx);
-	}
-
-	// glfw: initialize and configure
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// glfw window creation
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Lab 6", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Tank Field Simulator", NULL, NULL);
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -336,39 +64,285 @@ int main(int argc, char** argv)
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	glfwSetKeyCallback(window, key_callback);
 
-
-	// tell GLFW to capture our mouse
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glewInit();
 
-	Initialize();
+	// Create camera
+	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
+
+	// configure global opengl state
+	// -----------------------------
+	glEnable(GL_DEPTH_TEST);
+
+	// build and compile shaders
+	// -------------------------
+	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
+	Shader shadowMappingDepthShader("ShadowMappingDepth.vs", "ShadowMappingDepth.fs");
+
+	// load textures
+	// -------------
+	unsigned int floorTexture = TextureLoader::CreateTexture("../Resources/ColoredFloor.png");
+
+	// configure depth map FBO
+	// -----------------------
+	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+	unsigned int depthMapFBO;
+	glGenFramebuffers(1, &depthMapFBO);
+	// create depth texture
+	unsigned int depthMap;
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+	// attach depth texture as FBO's depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	// shader configuration
+	// --------------------
+	shadowMappingShader.Use();
+	shadowMappingShader.SetInt("diffuseTexture", 0);
+	shadowMappingShader.SetInt("shadowMap", 1);
+
+	// lighting info
+	// -------------
+
+	glEnable(GL_CULL_FACE);
 
 	// render loop
-	while (!glfwWindowShouldClose(window)) {
+	// -----------
+	while (!glfwWindowShouldClose(window))
+	{
 		// per-frame time logic
-		double currentFrame = glfwGetTime();
+		// --------------------
+		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+		glm::vec3 lightPos(-2, 4.0f, 1);
+
 		// input
+		// -----
 		processInput(window);
 
 		// render
-		RenderFunction();
+		// ------
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// 1. render depth of scene to texture (from light's perspective)
+		glm::mat4 lightProjection, lightView;
+		glm::mat4 lightSpaceMatrix;
+		float near_plane = 1.0f, far_plane = 7.5f;
+		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+		lightSpaceMatrix = lightProjection * lightView;
+
+		// render scene from light's point of view
+		shadowMappingDepthShader.Use();
+		shadowMappingDepthShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+		renderScene(shadowMappingDepthShader);
+		glCullFace(GL_BACK);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		// reset viewport
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// 2. render scene as normal using the generated depth/shadow map 
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		shadowMappingShader.Use();
+		glm::mat4 projection = pCamera->GetProjectionMatrix();
+		glm::mat4 view = pCamera->GetViewMatrix();
+		shadowMappingShader.SetMat4("projection", projection);
+		shadowMappingShader.SetMat4("view", view);
+		// set light uniforms
+		shadowMappingShader.SetVec3("viewPos", pCamera->GetPosition());
+		shadowMappingShader.SetVec3("lightPos", lightPos);
+		shadowMappingShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, depthMap);
+		glDisable(GL_CULL_FACE);
+		renderScene(shadowMappingShader);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
-	Cleanup();
+	// optional: de-allocate all resources once they've outlived their purpose:
+	delete pCamera;
 
-	// glfw: terminate, clearing all previously allocated GLFW resources
 	glfwTerminate();
 	return 0;
+}
+
+// renders the 3D scene
+// --------------------
+void renderScene(const Shader& shader)
+{
+	glm::vec3 cubePositions[] = {
+	glm::vec3(-4.0f,  1.0f,   0.0f),
+	glm::vec3(3.0f,  2.0f,   1.0f),
+	glm::vec3(2.0f,  2.0f,   -2.0f),
+	};
+
+	// floor
+	glm::mat4 model;
+	shader.SetMat4("model", model);
+	renderFloor();
+
+	// cube
+	model = glm::mat4();
+	model = glm::translate(model, glm::vec3(0.0f, 1.75f, 0.0));
+	model = glm::scale(model, glm::vec3(0.75f));
+	shader.SetMat4("model", model);
+	renderCube();
+
+	for (unsigned int i = 0; i < sizeof(cubePositions) / sizeof(cubePositions[0]); i++) {
+		// calculate the model matrix for each object and pass it to shader before drawing
+		glm::mat4 worldTransf;
+		worldTransf = glm::rotate(glm::mat4(1.0), glm::radians((float)360 / (i + 2)), cubePositions[i]);
+		worldTransf = glm::translate(worldTransf, cubePositions[i]);
+		worldTransf = glm::scale(worldTransf, glm::vec3((float)1 / (i + 1)));
+		shader.SetMat4("model", worldTransf);
+		renderCube();
+	}
+}
+
+unsigned int planeVAO = 0;
+void renderFloor()
+{
+	unsigned int planeVBO;
+
+	if (planeVAO == 0) {
+		// set up vertex data (and buffer(s)) and configure vertex attributes
+		float planeVertices[] = {
+			// positions            // normals         // texcoords
+			25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+			-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+			-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+
+			25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+			-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+			25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
+		};
+		// plane VAO
+		glGenVertexArrays(1, &planeVAO);
+		glGenBuffers(1, &planeVBO);
+		glBindVertexArray(planeVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindVertexArray(0);
+	}
+
+	glBindVertexArray(planeVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+
+// renderCube() renders a 1x1 3D cube in NDC.
+// -------------------------------------------------
+unsigned int cubeVAO = 0;
+unsigned int cubeVBO = 0;
+void renderCube()
+{
+	// initialize (if necessary)
+	if (cubeVAO == 0)
+	{
+		float vertices[] = {
+			// back face
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
+			1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+			// front face
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+			1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			// left face
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			// right face
+			1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
+			1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
+			// bottom face
+			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+			1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			-1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			// top face
+			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
+			1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
+		};
+		glGenVertexArrays(1, &cubeVAO);
+		glGenBuffers(1, &cubeVBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(cubeVAO);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(cubeVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -389,16 +363,6 @@ void processInput(GLFWwindow* window)
 		pCamera->ProcessKeyboard(UP, (float)deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 		pCamera->ProcessKeyboard(DOWN, (float)deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS)
-	{
-		if (mixValue >= 1) mixValue = 1;
-		else mixValue += 0.5f * deltaTime;
-	}
-	if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS)
-	{
-		if (mixValue <= 0) mixValue = 0;
-		else mixValue -= 0.5f * deltaTime;
-	}
 
 	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
 		int width, height;
@@ -408,12 +372,9 @@ void processInput(GLFWwindow* window)
 	}
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-	// make sure the viewport matches the new window dimensions; note that width and
-	// height will be significantly larger than specified on retina displays.
 	pCamera->Reshape(width, height);
 }
 

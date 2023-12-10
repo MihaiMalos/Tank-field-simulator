@@ -1,10 +1,7 @@
+
 #pragma once
 
-#include <GL/glew.h>
-
 #include <GLM.hpp>
-#include <gtc/matrix_transform.hpp>
-#include <gtc/type_ptr.hpp>
 
 enum ECameraMovementType
 {
@@ -30,6 +27,8 @@ private:
 
 public:
 	Camera(const int width, const int height, const glm::vec3& position);
+
+	glm::vec3 GetPosition();
 
 	void Set(const int width, const int height, const glm::vec3& position);
 	void Reset(const int width, const int height);

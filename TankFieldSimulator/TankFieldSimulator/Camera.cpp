@@ -1,9 +1,19 @@
+
 #include "Camera.h"
+
+#include <gtc/matrix_transform.hpp>
+#include <GL/glew.h>
+
 
 Camera::Camera(const int width, const int height, const glm::vec3& position)
 {
 	startPosition = position;
 	Set(width, height, position);
+}
+
+glm::vec3 Camera::GetPosition()
+{
+	return position;
 }
 
 void Camera::Set(const int width, const int height, const glm::vec3& position)
