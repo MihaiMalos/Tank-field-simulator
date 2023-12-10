@@ -32,15 +32,14 @@ const unsigned int SCR_HEIGHT = 600;
 
 Camera* pCamera = nullptr;
 
-void renderScene(const Shader& shader);
-void renderCube();
-void renderFloor();
+void RenderScene(const Shader& shader);
+void RenderCube();
+void RenderFloor();
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window);
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+void MouseCallback(GLFWwindow* window, double xpos, double ypos);
+void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+void ProcessKeyboard(GLFWwindow* window);
 
 // timing
 double deltaTime = 0.0f;	// time between current frame and last frame
@@ -61,33 +60,23 @@ int main(int argc, char** argv)
 	}
 
 	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
+	glfwSetCursorPosCallback(window, MouseCallback);
+	glfwSetScrollCallback(window, ScrollCallback);
 
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glewInit();
 
-	// Create camera
 	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
 
-	// configure global opengl state
-	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
 
-	// build and compile shaders
-	// -------------------------
 	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
 	Shader shadowMappingDepthShader("ShadowMappingDepth.vs", "ShadowMappingDepth.fs");
+	unsigned int floorTexture = TextureLoader::CreateTexture("../Resources/Floor.png");
 
-	// load textures
-	// -------------
-	unsigned int floorTexture = TextureLoader::CreateTexture("../Resources/ColoredFloor.png");
-
-	// configure depth map FBO
-	// -----------------------
-	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 	unsigned int depthMapFBO;
 	glGenFramebuffers(1, &depthMapFBO);
 	// create depth texture
@@ -110,19 +99,13 @@ int main(int argc, char** argv)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
-	// shader configuration
-	// --------------------
 	shadowMappingShader.Use();
 	shadowMappingShader.SetInt("diffuseTexture", 0);
 	shadowMappingShader.SetInt("shadowMap", 1);
 
-	// lighting info
-	// -------------
 
 	glEnable(GL_CULL_FACE);
 
-	// render loop
-	// -----------
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -135,7 +118,7 @@ int main(int argc, char** argv)
 
 		// input
 		// -----
-		processInput(window);
+		ProcessKeyboard(window);
 
 		// render
 		// ------
@@ -161,7 +144,7 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, floorTexture);
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_FRONT);
-		renderScene(shadowMappingDepthShader);
+		RenderScene(shadowMappingDepthShader);
 		glCullFace(GL_BACK);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -186,7 +169,7 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
-		renderScene(shadowMappingShader);
+		RenderScene(shadowMappingShader);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
@@ -202,7 +185,7 @@ int main(int argc, char** argv)
 
 // renders the 3D scene
 // --------------------
-void renderScene(const Shader& shader)
+void RenderScene(const Shader& shader)
 {
 	glm::vec3 cubePositions[] = {
 	glm::vec3(-4.0f,  1.0f,   0.0f),
@@ -213,14 +196,14 @@ void renderScene(const Shader& shader)
 	// floor
 	glm::mat4 model;
 	shader.SetMat4("model", model);
-	renderFloor();
+	RenderFloor();
 
 	// cube
 	model = glm::mat4();
 	model = glm::translate(model, glm::vec3(0.0f, 1.75f, 0.0));
 	model = glm::scale(model, glm::vec3(0.75f));
 	shader.SetMat4("model", model);
-	renderCube();
+	RenderCube();
 
 	for (unsigned int i = 0; i < sizeof(cubePositions) / sizeof(cubePositions[0]); i++) {
 		// calculate the model matrix for each object and pass it to shader before drawing
@@ -229,12 +212,12 @@ void renderScene(const Shader& shader)
 		worldTransf = glm::translate(worldTransf, cubePositions[i]);
 		worldTransf = glm::scale(worldTransf, glm::vec3((float)1 / (i + 1)));
 		shader.SetMat4("model", worldTransf);
-		renderCube();
+		RenderCube();
 	}
 }
 
 unsigned int planeVAO = 0;
-void renderFloor()
+void RenderFloor()
 {
 	unsigned int planeVBO;
 
@@ -269,12 +252,9 @@ void renderFloor()
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-
-// renderCube() renders a 1x1 3D cube in NDC.
-// -------------------------------------------------
 unsigned int cubeVAO = 0;
 unsigned int cubeVBO = 0;
-void renderCube()
+void RenderCube()
 {
 	// initialize (if necessary)
 	if (cubeVAO == 0)
@@ -345,24 +325,23 @@ void renderCube()
 	glBindVertexArray(0);
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-void processInput(GLFWwindow* window)
+void ProcessKeyboard(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(FORWARD, (float)deltaTime);
+		pCamera->ProcessKeyboard(FORWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(BACKWARD, (float)deltaTime);
+		pCamera->ProcessKeyboard(BACKWARD, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(LEFT, (float)deltaTime);
+		pCamera->ProcessKeyboard(LEFT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(RIGHT, (float)deltaTime);
+		pCamera->ProcessKeyboard(RIGHT, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(UP, (float)deltaTime);
+		pCamera->ProcessKeyboard(UP, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-		pCamera->ProcessKeyboard(DOWN, (float)deltaTime);
+		pCamera->ProcessKeyboard(DOWN, deltaTime);
 
 	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
 		int width, height;
@@ -373,22 +352,17 @@ void processInput(GLFWwindow* window)
 }
 
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
 	pCamera->Reshape(width, height);
 }
 
-void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+void MouseCallback(GLFWwindow* window, double xpos, double ypos)
 {
 	pCamera->MouseControl((float)xpos, (float)ypos);
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yOffset)
+void ScrollCallback(GLFWwindow* window, double xoffset, double yOffset)
 {
 	pCamera->ProcessMouseScroll((float)yOffset);
-}
-
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-
 }

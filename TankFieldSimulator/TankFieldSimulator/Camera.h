@@ -37,7 +37,7 @@ public:
 	const glm::mat4 GetViewMatrix() const;
 	const glm::mat4 GetProjectionMatrix() const;
 
-	void ProcessKeyboard(ECameraMovementType direction, float deltaTime);
+	void ProcessKeyboard(ECameraMovementType direction, double deltaTime);
 	void MouseControl(float xPos, float yPos);
 	void ProcessMouseScroll(float yOffset);
 
