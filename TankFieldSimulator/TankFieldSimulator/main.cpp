@@ -1,3 +1,7 @@
+#include <Windows.h>
+#include <locale>
+#include <codecvt>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h> 
@@ -18,9 +22,7 @@
 #include "Camera.h"
 #include "TextureLoader.h"
 #include "Shader.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#include "Model.h"
 
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
@@ -106,6 +108,21 @@ int main(int argc, char** argv)
 
 	glEnable(GL_CULL_FACE);
 
+	wchar_t buffer[MAX_PATH];
+	GetCurrentDirectoryW(MAX_PATH, buffer);
+
+	std::wstring executablePath(buffer);
+	std::wstring wscurrentPath = executablePath.substr(0, executablePath.find_last_of(L"\\/"));
+
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+	std::string currentPath = converter.to_bytes(wscurrentPath);
+
+	Shader lightingShader((currentPath + "\\Shaders\\PhongLight.vs").c_str(), (currentPath + "\\Shaders\\PhongLight.fs").c_str());
+	Shader lampShader((currentPath + "\\Shaders\\Lamp.vs").c_str(), (currentPath + "\\Shaders\\Lamp.fs").c_str());
+
+	std::string piratObjFileName = (currentPath + "\\Resources\\t-90a(Elements_of_war).obj");
+	Model piratObjModel(piratObjFileName, false);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -160,6 +177,11 @@ int main(int argc, char** argv)
 		glm::mat4 view = pCamera->GetViewMatrix();
 		shadowMappingShader.SetMat4("projection", projection);
 		shadowMappingShader.SetMat4("view", view);
+
+		glm::mat4 piratModel = glm::scale(glm::mat4(1.0), glm::vec3(1.f));
+		lightingShader.SetMat4("model", piratModel);
+		piratObjModel.Draw(lightingShader);
+
 		// set light uniforms
 		shadowMappingShader.SetVec3("viewPos", pCamera->GetPosition());
 		shadowMappingShader.SetVec3("lightPos", lightPos);
