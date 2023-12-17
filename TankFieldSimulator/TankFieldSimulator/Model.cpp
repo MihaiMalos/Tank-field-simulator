@@ -77,9 +77,6 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene)
             vector.z = mesh->mNormals[i].z;
             vertex.Normal = vector;
         }
-        else {
-            int j = 0;
-        }
         // texture coordinates
         if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
         {

@@ -22,7 +22,9 @@
 #include "Camera.h"
 #include "TextureLoader.h"
 #include "Shader.h"
+
 #include "Model.h"
+
 
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
@@ -106,22 +108,9 @@ int main(int argc, char** argv)
 	shadowMappingShader.SetInt("shadowMap", 1);
 
 
+	Model tankObj("../Models/Tank/tank.obj", false);
+
 	glEnable(GL_CULL_FACE);
-
-	wchar_t buffer[MAX_PATH];
-	GetCurrentDirectoryW(MAX_PATH, buffer);
-
-	std::wstring executablePath(buffer);
-	std::wstring wscurrentPath = executablePath.substr(0, executablePath.find_last_of(L"\\/"));
-
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-	std::string currentPath = converter.to_bytes(wscurrentPath);
-
-	Shader lightingShader((currentPath + "\\Shaders\\PhongLight.vs").c_str(), (currentPath + "\\Shaders\\PhongLight.fs").c_str());
-	Shader lampShader((currentPath + "\\Shaders\\Lamp.vs").c_str(), (currentPath + "\\Shaders\\Lamp.fs").c_str());
-
-	std::string piratObjFileName = (currentPath + "\\Resources\\t-90a(Elements_of_war).obj");
-	Model piratObjModel(piratObjFileName, false);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -178,9 +167,6 @@ int main(int argc, char** argv)
 		shadowMappingShader.SetMat4("projection", projection);
 		shadowMappingShader.SetMat4("view", view);
 
-		glm::mat4 piratModel = glm::scale(glm::mat4(1.0), glm::vec3(1.f));
-		lightingShader.SetMat4("model", piratModel);
-		piratObjModel.Draw(lightingShader);
 
 		// set light uniforms
 		shadowMappingShader.SetVec3("viewPos", pCamera->GetPosition());
@@ -192,6 +178,12 @@ int main(int argc, char** argv)
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
 		RenderScene(shadowMappingShader);
+
+		glm::mat4 tankModel;
+		tankModel = glm::translate(tankModel, glm::vec3(3.0f, -1.0f, 3.0f));
+		tankModel = glm::rotate(tankModel, glm::radians(-90.f), glm::vec3(1.0f, 0.0f, 0.0f));
+		shadowMappingShader.SetMat4("model", tankModel);
+		tankObj.Draw(shadowMappingShader);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
