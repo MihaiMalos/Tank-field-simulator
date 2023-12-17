@@ -1,4 +1,4 @@
-
+ï»¿#include <iostream>
 #include "Camera.h"
 
 #include <gtc/matrix_transform.hpp>
@@ -6,8 +6,18 @@
 
 
 Camera::Camera(const int width, const int height, const glm::vec3& position)
+	: 
+	startPosition(position) // Lista de iniÈ›ializare
 {
-	startPosition = position;
+	try {
+		if (glewInit() != GLEW_OK) {
+			throw std::runtime_error("Failed to initialize GLEW");
+		}
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
+
 	Set(width, height, position);
 }
 
@@ -50,6 +60,9 @@ void Camera::Reshape(int windowWidth, int windowHeight)
 
 	// define the viewport transformation
 	glViewport(0, 0, windowWidth, windowHeight);
+
+	// Adaugare log pentru debug
+	std::cout << "Viewport resized to: " << windowWidth << " x " << windowHeight << std::endl;
 }
 
 const glm::mat4 Camera::GetViewMatrix() const
@@ -137,10 +150,10 @@ void Camera::ProcessMouseMovement(float xOffset, float yOffset, bool constrainPi
 	yaw += xOffset;
 	pitch += yOffset;
 
-	//std::cout << "yaw = " << yaw << std::endl;
-	//std::cout << "pitch = " << pitch << std::endl;
+	// Adaugare log pentru debug
+	std::cout << "Yaw: " << yaw << ", Pitch: " << pitch << std::endl;
 
-	// Avem grijã sã nu ne dãm peste cap
+	// Avem grijÄƒ sÄƒ nu ne dÄƒm peste cap
 	if (constrainPitch) {
 		if (pitch > 89.0f)
 			pitch = 89.0f;
@@ -148,7 +161,7 @@ void Camera::ProcessMouseMovement(float xOffset, float yOffset, bool constrainPi
 			pitch = -89.0f;
 	}
 
-	// Se modificã vectorii camerei pe baza unghiurilor Euler
+	// ModificÄƒm vectorii camerei pe baza unghiurilor Euler
 	UpdateCameraVectors();
 }
 
