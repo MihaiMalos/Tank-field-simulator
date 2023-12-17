@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 
 	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
 	Shader shadowMappingDepthShader("ShadowMappingDepth.vs", "ShadowMappingDepth.fs");
-	unsigned int floorTexture = TextureLoader::CreateTexture("../Resources/Floor.png");
+	unsigned int floorTexture = TextureLoader::CreateTexture("ColoredFloor.png");
 
 	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 	unsigned int depthMapFBO;
