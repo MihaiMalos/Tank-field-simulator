@@ -1,30 +1,17 @@
-#include <Windows.h>
-#include <locale>
-#include <codecvt>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h> 
+#define GLM_FORCE_CTOR_INIT 
 
 #include <GL/glew.h>
-
-#define GLM_FORCE_CTOR_INIT 
-#include <GLM.hpp>
-#include <gtc/matrix_transform.hpp>
-#include <gtc/type_ptr.hpp>
-
 #include <glfw3.h>
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
 
 #include "Camera.h"
 #include "TextureLoader.h"
 #include "Shader.h"
+#include "Renderer.h"
+#include "VertexBuffer.h"
+#include "VertexArray.h"
+#include "IndexBuffer.h"
 
 #include "Model.h"
-
 
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
@@ -37,19 +24,14 @@ const unsigned int SCR_HEIGHT = 600;
 Camera* pCamera = nullptr;
 
 void RenderScene(const Shader& shader);
-void RenderCube();
 void RenderFloor();
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
-void ProcessKeyboard(GLFWwindow* window);
+void ProcessKeyboard(GLFWwindow* window, double deltaTime);
 
-// timing
-double deltaTime = 0.0f;	// time between current frame and last frame
-double lastFrame = 0.0f;
-
-int main(int argc, char** argv)
+GLFWwindow* InitWindow()
 {
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -60,7 +42,7 @@ int main(int argc, char** argv)
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
-		return -1;
+		exit(-1);
 	}
 
 	glfwMakeContextCurrent(window);
@@ -72,8 +54,14 @@ int main(int argc, char** argv)
 
 	glewInit();
 
-	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
+	return window;
+}
 
+int main(int argc, char** argv)
+{
+	GLFWwindow* window = InitWindow();
+
+	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
 	glEnable(GL_DEPTH_TEST);
 
 	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
@@ -111,6 +99,10 @@ int main(int argc, char** argv)
 
 	glEnable(GL_CULL_FACE);
 
+	// timing
+	double deltaTime = 0.0f;	// time between current frame and last frame
+	double lastFrame = 0.0f;
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -123,7 +115,7 @@ int main(int argc, char** argv)
 
 		// input
 		// -----
-		ProcessKeyboard(window);
+		ProcessKeyboard(window, deltaTime);
 
 		// render
 		// ------
@@ -179,8 +171,8 @@ int main(int argc, char** argv)
 		RenderScene(shadowMappingShader);
 
 		glm::mat4 tankModel;
-		tankModel = glm::translate(tankModel, glm::vec3(3.0f, -1.0f, 3.0f));
-		tankModel = glm::rotate(tankModel, glm::radians(-90.f), glm::vec3(1.0f, 0.0f, 0.0f));
+		tankModel = glm::translate(tankModel, glm::vec3(0.0f, -1.0f, 10.0f));
+		tankModel = glm::rotate(tankModel, glm::radians(270.f), glm::vec3(1.0f, 0.0f, 0.0f));
 		shadowMappingShader.SetMat4("model", tankModel);
 		tankObj.Draw(shadowMappingShader);
 
@@ -200,21 +192,15 @@ int main(int argc, char** argv)
 // --------------------
 void RenderScene(const Shader& shader)
 {
-	glm::vec3 cubePositions[] = {
-	glm::vec3(-4.0f,  1.0f,   0.0f),
-	glm::vec3(3.0f,  2.0f,   1.0f),
-	glm::vec3(2.0f,  2.0f,   -2.0f),
-	};
-
 	// floor
 	glm::mat4 model;
 	shader.SetMat4("model", model);
 	RenderFloor();
 }
 
-unsigned int planeVAO = 0;
 void RenderFloor()
 {
+	static unsigned int planeVAO = 0;
 	unsigned int planeVBO;
 
 	if (planeVAO == 0) {
@@ -249,7 +235,7 @@ void RenderFloor()
 }
 
 
-void ProcessKeyboard(GLFWwindow* window)
+void ProcessKeyboard(GLFWwindow* window, double deltaTime)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);

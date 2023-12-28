@@ -2,40 +2,29 @@
 
 Mesh::Mesh(const vector<Vertex>& vertices, const vector<unsigned int>& indices, const vector<Texture>& textures)
 {
-   std::cout << "start mesh constructor " << std::endl;
 
-   std::cout << "reserve vertices " << std::endl;
    numVertices = vertices.size();
    this->vertices.reset(new Vertex[numVertices]);
 
-   std::cout << "start copy vertices " << std::endl;
    for (size_t i = 0; i < vertices.size(); ++i) {
       this->vertices.get()[i] = vertices[i];
    }
 
-   std::cout << "reserve indices " << std::endl;
    numIndexes = indices.size();
    this->indices.reset(new unsigned int[numIndexes]);
 
-   std::cout << "start copy indices " << std::endl;
    for (size_t i = 0; i < indices.size(); ++i) {
       this->indices.get()[i] = indices[i];
    }
 
-   std::cout << "start copy textures " << std::endl;
    this->textures = textures;
 
-   // now that we have all the required data, set the vertex buffers and its attribute pointers.
    setupMesh();
 
-   std::cout << "end mesh constructor " << std::endl;
 }
 
 Mesh::Mesh(unsigned int numVertices, std::shared_ptr <Vertex> vertices, unsigned int numIndexes, std::shared_ptr <unsigned int> indices, const vector<Texture>& textures)
 {
-
-   std::cout << "start mesh constructor. num vertice = " << numVertices << " num indexes " << numIndexes << std::endl;
-
    this->numVertices = numVertices;
    this->vertices = vertices;
 
@@ -46,8 +35,6 @@ Mesh::Mesh(unsigned int numVertices, std::shared_ptr <Vertex> vertices, unsigned
 
    // now that we have all the required data, set the vertex buffers and its attribute pointers.
    setupMesh();
-
-   std::cout << "end mesh constructor " << std::endl;
 }
 
 // render the mesh
@@ -96,7 +83,6 @@ void Mesh::Draw(Shader& shader)
 // initializes all the buffer objects/arrays
 void Mesh::setupMesh()
 {
-   std::cout << "start to setup mesh " << std::endl;
    // create buffers/arrays
    glGenVertexArrays(1, &VAO);
    glGenBuffers(1, &VBO);
@@ -137,7 +123,5 @@ void Mesh::setupMesh()
    glEnableVertexAttribArray(6);
    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, m_Weights));
    glBindVertexArray(0);
-
-   std::cout << "end to setup mesh " << std::endl;
 }
 

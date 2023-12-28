@@ -60,9 +60,6 @@ void Camera::Reshape(int windowWidth, int windowHeight)
 
 	// define the viewport transformation
 	glViewport(0, 0, windowWidth, windowHeight);
-
-	// Adaugare log pentru debug
-	std::cout << "Viewport resized to: " << windowWidth << " x " << windowHeight << std::endl;
 }
 
 const glm::mat4 Camera::GetViewMatrix() const
@@ -150,8 +147,6 @@ void Camera::ProcessMouseMovement(float xOffset, float yOffset, bool constrainPi
 	yaw += xOffset;
 	pitch += yOffset;
 
-	// Adaugare log pentru debug
-	std::cout << "Yaw: " << yaw << ", Pitch: " << pitch << std::endl;
 
 	// Avem grijă să nu ne dăm peste cap
 	if (constrainPitch) {
