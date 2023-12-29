@@ -183,8 +183,8 @@ int main(int argc, char** argv)
 
 	unsigned int cubemapTexture = TextureLoader::LoadSkybox(faces);
 
-	//shader.Use();
-	//shader.SetInt("skybox", 0);
+	shader.Use();
+	shader.SetInt("skybox", 0);
 
 	skyboxShader.Use();
 	skyboxShader.SetInt("skybox", 0);
