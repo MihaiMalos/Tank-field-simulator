@@ -149,10 +149,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="shader.fs" />
+    <None Include="shader.vs" />
     <None Include="ShadowMapping.fs" />
     <None Include="ShadowMapping.vs" />
     <None Include="ShadowMappingDepth.fs" />
     <None Include="ShadowMappingDepth.vs" />
+    <None Include="Skybox.fs" />
+    <None Include="Skybox.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
