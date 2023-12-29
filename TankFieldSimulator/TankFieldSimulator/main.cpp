@@ -1,28 +1,12 @@
-#include <Windows.h>
-#include <locale>
-#include <codecvt>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h> 
+#define GLM_FORCE_CTOR_INIT 
 
 #include <GL/glew.h>
-
-#define GLM_FORCE_CTOR_INIT 
-#include <GLM.hpp>
-#include <gtc/matrix_transform.hpp>
-#include <gtc/type_ptr.hpp>
-
 #include <glfw3.h>
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
 
 #include "Camera.h"
 #include "TextureLoader.h"
 #include "Shader.h"
-
+#include "Mesh.h"
 #include "Model.h"
 
 
@@ -35,10 +19,6 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 Camera* pCamera = nullptr;
-
-void RenderScene(const Shader& shader);
-void RenderCube();
-void RenderFloor();
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
@@ -78,7 +58,6 @@ int main(int argc, char** argv)
 
 	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
 	Shader shadowMappingDepthShader("ShadowMappingDepth.vs", "ShadowMappingDepth.fs");
-	unsigned int floorTexture = TextureLoader::CreateTexture("../Resources/Floor.png");
 
 	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 	unsigned int depthMapFBO;
@@ -90,12 +69,11 @@ int main(int argc, char** argv)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
 	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-	// attach depth texture as FBO's depth buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glDrawBuffer(GL_NONE);
@@ -111,6 +89,26 @@ int main(int argc, char** argv)
 
 	glEnable(GL_CULL_FACE);
 
+	std::vector<Vertex> floorVertices =
+	{
+		// positions            // normals           // texcoords
+	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
+	   {-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,    0.0f,  0.0f},
+	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
+
+	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
+	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
+	   {25.0f, -0.5f, -25.0f,   0.0f, 1.0f, 0.0f,    25.0f, 25.0f}
+	};
+
+	unsigned int floorTextureId = TextureLoader::CreateTexture("../Resources/Floor.png");
+	Texture floorTexture;
+	floorTexture.SetTextureId(floorTextureId);
+	
+	Mesh floor(floorVertices, {}, { floorTexture });
+
+	glm::vec3 lightPos(0.0f, 3.0f, -0.5f);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// per-frame time logic
@@ -119,7 +117,6 @@ int main(int argc, char** argv)
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		glm::vec3 lightPos(-2, 4.0f, 1);
 
 		// input
 		// -----
@@ -146,10 +143,9 @@ int main(int argc, char** argv)
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		glBindTexture(GL_TEXTURE_2D, floorTextureId);
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_FRONT);
-		RenderScene(shadowMappingDepthShader);
 		glCullFace(GL_BACK);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -172,17 +168,14 @@ int main(int argc, char** argv)
 		shadowMappingShader.SetVec3("lightPos", lightPos);
 		shadowMappingShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		glBindTexture(GL_TEXTURE_2D, floorTextureId);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
-		RenderScene(shadowMappingShader);
 
-		glm::mat4 tankModel;
-		tankModel = glm::translate(tankModel, glm::vec3(3.0f, -1.0f, 3.0f));
-		tankModel = glm::rotate(tankModel, glm::radians(-90.f), glm::vec3(1.0f, 0.0f, 0.0f));
-		shadowMappingShader.SetMat4("model", tankModel);
+		floor.Draw(shadowMappingShader);
 		tankObj.Draw(shadowMappingShader);
+
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
@@ -195,59 +188,6 @@ int main(int argc, char** argv)
 	glfwTerminate();
 	return 0;
 }
-
-// renders the 3D scene
-// --------------------
-void RenderScene(const Shader& shader)
-{
-	glm::vec3 cubePositions[] = {
-	glm::vec3(-4.0f,  1.0f,   0.0f),
-	glm::vec3(3.0f,  2.0f,   1.0f),
-	glm::vec3(2.0f,  2.0f,   -2.0f),
-	};
-
-	// floor
-	glm::mat4 model;
-	shader.SetMat4("model", model);
-	RenderFloor();
-}
-
-unsigned int planeVAO = 0;
-void RenderFloor()
-{
-	unsigned int planeVBO;
-
-	if (planeVAO == 0) {
-		// set up vertex data (and buffer(s)) and configure vertex attributes
-		float planeVertices[] = {
-			// positions            // normals         // texcoords
-			25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-			-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-			-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-
-			25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
-			-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
-			25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
-		};
-		// plane VAO
-		glGenVertexArrays(1, &planeVAO);
-		glGenBuffers(1, &planeVBO);
-		glBindVertexArray(planeVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-		glBindVertexArray(0);
-	}
-
-	glBindVertexArray(planeVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-}
-
 
 void ProcessKeyboard(GLFWwindow* window)
 {
