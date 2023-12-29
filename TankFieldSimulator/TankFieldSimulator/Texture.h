@@ -1,14 +1,14 @@
 #pragma once
 #include <string>
+#include <Vector>
 
 struct Texture {
     unsigned int id;
     std::string type;
     std::string path;
 
-    void SetTextureId(unsigned int id)
-    {
-        this->id = id;
-        this->type = "texture_diffuse";
-    }
+    Texture() = default;
+    Texture(const std::string& strTexturePath);
+    Texture(std::vector<std::string> faces);
+
 };

@@ -1,9 +1,11 @@
-#include "TextureLoader.h"
+#include "Texture.h"
 
 #include <stb_image.h>
 #include <GL/glew.h>
+#include <iostream>
 
-unsigned int TextureLoader::CreateTexture(const std::string& strTexturePath)
+Texture::Texture(const std::string& strTexturePath)
+	: path(strTexturePath)
 {
 	unsigned int textureId = -1;
 
@@ -32,15 +34,16 @@ unsigned int TextureLoader::CreateTexture(const std::string& strTexturePath)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
-	else {
+	else
+	{
 		std::cout << "Failed to load texture: " << strTexturePath << std::endl;
 	}
-	stbi_image_free(data);
 
-	return textureId;
+	stbi_image_free(data);
+	id = textureId;
 }
 
-unsigned int TextureLoader::LoadSkybox(std::vector<std::string> faces)
+Texture::Texture(std::vector<std::string> faces)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -60,5 +63,5 @@ unsigned int TextureLoader::LoadSkybox(std::vector<std::string> faces)
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	return textureID;
+	id = textureID;
 }

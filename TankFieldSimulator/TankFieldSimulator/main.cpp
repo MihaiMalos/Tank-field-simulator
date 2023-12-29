@@ -4,7 +4,6 @@
 #include <glfw3.h>
 
 #include "Camera.h"
-#include "TextureLoader.h"
 #include "Shader.h"
 #include "Mesh.h"
 #include "Model.h"
@@ -18,15 +17,48 @@
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-Camera* pCamera = nullptr;
+std::unique_ptr<Camera> pCamera;
+std::unique_ptr<Mesh> floorObj;
+std::unique_ptr<Model> tankObj;
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void ProcessKeyboard(GLFWwindow* window);
 
-// timing
-double deltaTime = 0.0f;	// time between current frame and last frame
+
+
+void LoadObjects()
+{
+	// Texture loading
+	Texture floorTexture("../Resources/Floor.png");
+
+	// Positions loading
+	std::vector<Vertex> floorVertices =
+	{
+		// positions            // normals           // texcoords
+	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
+	   {-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,    0.0f,  0.0f},
+	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
+
+	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
+	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
+	   {25.0f, -0.5f, -25.0f,   0.0f, 1.0f, 0.0f,    25.0f, 25.0f}
+	};
+
+	// Objects loading
+	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
+	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false);
+
+}
+
+void RenderScene(Shader& shader)
+{
+	floorObj->Draw(shader);
+	tankObj->Draw(shader);
+}
+
+double deltaTime = 0.0f;
 double lastFrame = 0.0f;
 
 int main(int argc, char** argv)
@@ -52,7 +84,7 @@ int main(int argc, char** argv)
 
 	glewInit();
 
-	pCamera = new Camera(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
+	pCamera = std::make_unique<Camera>(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -84,28 +116,9 @@ int main(int argc, char** argv)
 	shadowMappingShader.SetInt("diffuseTexture", 0);
 	shadowMappingShader.SetInt("shadowMap", 1);
 
-
-	Model tankObj("../Models/Tank/tank.obj", false);
-
 	glEnable(GL_CULL_FACE);
 
-	std::vector<Vertex> floorVertices =
-	{
-		// positions            // normals           // texcoords
-	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
-	   {-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,    0.0f,  0.0f},
-	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
-
-	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
-	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
-	   {25.0f, -0.5f, -25.0f,   0.0f, 1.0f, 0.0f,    25.0f, 25.0f}
-	};
-
-	unsigned int floorTextureId = TextureLoader::CreateTexture("../Resources/Floor.png");
-	Texture floorTexture;
-	floorTexture.SetTextureId(floorTextureId);
-	
-	Mesh floor(floorVertices, {}, { floorTexture });
+	LoadObjects();
 
 	glm::vec3 lightPos(0.0f, 3.0f, -0.5f);
 
@@ -143,7 +156,6 @@ int main(int argc, char** argv)
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, floorTextureId);
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_FRONT);
 		glCullFace(GL_BACK);
@@ -168,22 +180,17 @@ int main(int argc, char** argv)
 		shadowMappingShader.SetVec3("lightPos", lightPos);
 		shadowMappingShader.SetMat4("lightSpaceMatrix", lightSpaceMatrix);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, floorTextureId);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 		glDisable(GL_CULL_FACE);
 
-		floor.Draw(shadowMappingShader);
-		tankObj.Draw(shadowMappingShader);
+		RenderScene(shadowMappingShader);
 
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
-	// optional: de-allocate all resources once they've outlived their purpose:
-	delete pCamera;
 
 	glfwTerminate();
 	return 0;

@@ -26,6 +26,8 @@ public:
     Mesh(const vector<Vertex>& vertices, const vector<unsigned int>& indices, const vector<Texture>& textures);
     Mesh(unsigned int numVertices, std::shared_ptr <Vertex> vertices, unsigned int numIndexes, std::shared_ptr <unsigned int> indices, const vector<Texture>& textures);
     void Draw(Shader& shader);
+    void ApplyModelTransformation(const glm::mat4& model);
+
 private:
     // render data 
     unsigned int VBO, EBO;
