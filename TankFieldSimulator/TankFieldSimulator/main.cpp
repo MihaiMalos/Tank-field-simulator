@@ -161,13 +161,12 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
 
+		RenderScene(shadowMappingShader);
+
 		skyboxShader.Use();
 		skyboxShader.SetMat4("projection", projection);
 		skyboxShader.SetMat4("view", glm::mat4(glm::mat3(pCamera->GetViewMatrix())));
 		skyboxObj->Render(skyboxShader);
-
-		RenderScene(shadowMappingShader);
-
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
@@ -211,8 +210,8 @@ void LoadObjects()
 	Texture skyboxTexture({
 		"../Resources/Skybox/right.jpg",
 		"../Resources/Skybox/left.jpg",
-		"../Resources/Skybox/top.jpg",
 		"../Resources/Skybox/bottom.jpg",
+		"../Resources/Skybox/top.jpg",
 		"../Resources/Skybox/front.jpg",
 		"../Resources/Skybox/back.jpg"
 		});
@@ -231,7 +230,7 @@ void LoadObjects()
 
 
 	// Objects loading
-	skyboxObj = std::make_unique<SkyBox>(100, 100, 100, skyboxTexture);
+	skyboxObj = std::make_unique<SkyBox>(skyboxTexture);
 	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
 	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false);
 	helicopterObj = std::make_unique<Model>("../Models/Helicopter/OH-58D.obj", false);
@@ -244,7 +243,6 @@ void RenderScene(Shader& shader)
 {
 	glDisable(GL_CULL_FACE);
 	floorObj->RenderMesh(shader);
-	glEnable(GL_CULL_FACE);
 	glm::mat4 tankModel = glm::translate(glm::mat4(), glm::vec3(0, -1.3f, 0));
 	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
 	tankObj->RenderModel(shader, tankModel);
