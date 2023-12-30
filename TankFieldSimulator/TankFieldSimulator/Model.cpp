@@ -10,10 +10,10 @@ Model::Model(string const& path, bool bSmoothNormals, bool gamma) : gammaCorrect
     loadModel(path, bSmoothNormals);
 }
 
-void Model::Draw(Shader& shader)
+void Model::RenderModel(Shader& shader, const glm::mat4& model)
 {
     for (unsigned int i = 0; i < meshes.size(); i++)
-        meshes[i].Draw(shader);
+        meshes[i].RenderMesh(shader, model);
 }
 
 void Model::loadModel(string const& path, bool bSmoothNormals)

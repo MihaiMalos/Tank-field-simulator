@@ -7,6 +7,7 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Model.h"
+#include "SkyBox.h"
 
 
 #pragma comment (lib, "glfw3dll.lib")
@@ -19,44 +20,16 @@ const unsigned int SCR_HEIGHT = 600;
 
 std::unique_ptr<Camera> pCamera;
 std::unique_ptr<Mesh> floorObj;
-std::unique_ptr<Model> tankObj;
+std::unique_ptr<SkyBox> skyboxObj;
+std::unique_ptr<Model> tankObj, helicopterObj;
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void ProcessKeyboard(GLFWwindow* window);
 
-
-
-void LoadObjects()
-{
-	// Texture loading
-	Texture floorTexture("../Resources/Floor.png");
-
-	// Positions loading
-	std::vector<Vertex> floorVertices =
-	{
-		// positions            // normals           // texcoords
-	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
-	   {-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,    0.0f,  0.0f},
-	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
-
-	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
-	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
-	   {25.0f, -0.5f, -25.0f,   0.0f, 1.0f, 0.0f,    25.0f, 25.0f}
-	};
-
-	// Objects loading
-	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
-	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false);
-
-}
-
-void RenderScene(Shader& shader)
-{
-	floorObj->Draw(shader);
-	tankObj->Draw(shader);
-}
+void LoadObjects();
+void RenderScene(Shader& shader);
 
 double deltaTime = 0.0f;
 double lastFrame = 0.0f;
@@ -90,6 +63,7 @@ int main(int argc, char** argv)
 
 	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
 	Shader shadowMappingDepthShader("ShadowMappingDepth.vs", "ShadowMappingDepth.fs");
+	Shader skyboxShader("Skybox.vs", "Skybox.fs");
 
 	const unsigned int SHADOW_WIDTH = 4096, SHADOW_HEIGHT = 4096;
 	unsigned int depthMapFBO;
@@ -111,6 +85,9 @@ int main(int argc, char** argv)
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	skyboxShader.Use();
+	skyboxShader.SetInt("skybox", 0);
 
 	shadowMappingShader.Use();
 	shadowMappingShader.SetInt("diffuseTexture", 0);
@@ -155,6 +132,7 @@ int main(int argc, char** argv)
 		glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
+		RenderScene(shadowMappingDepthShader);
 		glActiveTexture(GL_TEXTURE0);
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_FRONT);
@@ -182,7 +160,11 @@ int main(int argc, char** argv)
 		glActiveTexture(GL_TEXTURE0);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
-		glDisable(GL_CULL_FACE);
+
+		skyboxShader.Use();
+		skyboxShader.SetMat4("projection", projection);
+		skyboxShader.SetMat4("view", glm::mat4(glm::mat3(pCamera->GetViewMatrix())));
+		skyboxObj->Render(skyboxShader);
 
 		RenderScene(shadowMappingShader);
 
@@ -222,6 +204,55 @@ void ProcessKeyboard(GLFWwindow* window)
 	}
 }
 
+void LoadObjects()
+{
+	// Texture loading
+	Texture floorTexture("../Resources/Floor.png");
+	Texture skyboxTexture({
+		"../Resources/Skybox/right.jpg",
+		"../Resources/Skybox/left.jpg",
+		"../Resources/Skybox/top.jpg",
+		"../Resources/Skybox/bottom.jpg",
+		"../Resources/Skybox/front.jpg",
+		"../Resources/Skybox/back.jpg"
+		});
+
+	// Positions loading
+	std::vector<Vertex> floorVertices({
+		// positions            // normals           // texcoords
+	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
+	   {-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,    0.0f,  0.0f},
+	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
+
+	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
+	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
+	   {25.0f, -0.5f, -25.0f,   0.0f, 1.0f, 0.0f,    25.0f, 25.0f}
+	});
+
+
+	// Objects loading
+	skyboxObj = std::make_unique<SkyBox>(100, 100, 100, skyboxTexture);
+	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
+	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false);
+	helicopterObj = std::make_unique<Model>("../Models/Helicopter/OH-58D.obj", false);
+
+
+
+}
+
+void RenderScene(Shader& shader)
+{
+	glDisable(GL_CULL_FACE);
+	floorObj->RenderMesh(shader);
+	glEnable(GL_CULL_FACE);
+	glm::mat4 tankModel = glm::translate(glm::mat4(), glm::vec3(0, -1.3f, 0));
+	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
+	tankObj->RenderModel(shader, tankModel);
+
+	glm::mat4 helicopterModel = glm::translate(glm::mat4(), glm::vec3(3, 3, 0));
+	//helicopterObj->RenderModel(shader, helicopterModel);
+
+}
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
 {

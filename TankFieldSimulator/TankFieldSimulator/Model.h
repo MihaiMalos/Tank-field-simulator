@@ -22,7 +22,7 @@ public:
     Model(string const& path, bool bSmoothNormals, bool gamma = false);
 
     // draws the model, and thus all its meshes
-    void Draw(Shader& shader);
+    void RenderModel(Shader& shader, const glm::mat4& model = glm::mat4(1));
 
 private:
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.

@@ -40,10 +40,9 @@ Mesh::Mesh(unsigned int numVertices, std::shared_ptr <Vertex> vertices, unsigned
 }
 
 // render the mesh
-void Mesh::Draw(Shader& shader)
+void Mesh::RenderMesh(Shader& shader, const glm::mat4& model)
 {
-	auto model = glm::mat4(1);
-	shader.SetMat4("model", model);
+    shader.SetMat4("model", model);
 
    unsigned int diffuseNr = 1;
    unsigned int specularNr = 1;
@@ -86,30 +85,6 @@ void Mesh::Draw(Shader& shader)
 
    // always good practice to set everything back to defaults once configured.
    glActiveTexture(GL_TEXTURE0);
-}
-
-void Mesh::ApplyModelTransformation(const glm::mat4& model)
-{
-	glm::mat4 normalModelMatrix = glm::transpose(glm::inverse(model));
-
-	for (unsigned int index = 0; index < numVertices; index++)
-	{
-        auto& vertice = vertices.get()[index];
-		//Coord
-		auto vertexPos4 = glm::vec4(vertice.Position, 1.0f);
-		vertexPos4 = model * vertexPos4;
-		vertice.Position = vertexPos4;
-
-		//Normal
-		auto vertexNormal4 = glm::vec4(vertice.Normal, 1.0f);
-		vertexNormal4 = normalModelMatrix * vertexNormal4;
-		vertice.Normal = glm::normalize(vertexNormal4);
-	}
-
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, numVertices * sizeof(Vertex), &vertices, GL_STATIC_DRAW);
-	glBindVertexArray(0);
 }
 
 // initializes all the buffer objects/arrays
