@@ -16,8 +16,8 @@ unsigned int meshID = 0;
 #pragma comment (lib, "OpenGL32.lib")
 
 // settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1000;
+const unsigned int SCR_HEIGHT = 800;
 
 std::unique_ptr<Camera> pCamera;
 std::unique_ptr<Mesh> floorObj;
@@ -44,6 +44,7 @@ int main(int argc, char** argv)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Tank Field Simulator", NULL, NULL);
+	
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -259,9 +260,11 @@ void RenderScene(Shader& shader)
 	helicopterModel = glm::scale(helicopterModel, 0.4f * glm::vec3(1));
 	helicopterModel = glm::rotate(helicopterModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
 	helicopterModel = glm::rotate(helicopterModel, glm::radians(90.0f), glm::vec3(0, 0, 1));
-	glm::mat4 propellerModel = helicopterModel;
-	propellerModel = glm::rotate(helicopterModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
-	helicopterObj->RenderModelMesh(shader, helicopterModel, 10, propellerModel);
+
+	glm::mat4 topPropellerModel = helicopterModel;
+	topPropellerModel = glm::rotate(topPropellerModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
+
+	helicopterObj->RenderModelMesh(shader, helicopterModel, 10, topPropellerModel);
 
 }
 
