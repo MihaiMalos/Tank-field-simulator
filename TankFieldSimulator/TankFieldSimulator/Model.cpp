@@ -5,8 +5,9 @@
 #include "stb_image.h"
 #endif
 
-Model::Model(string const& path, bool bSmoothNormals, bool gamma) : gammaCorrection(gamma)
+Model::Model(string const& path, bool bSmoothNormals, glm::vec3 position, bool gamma) : gammaCorrection(gamma)
 {
+    this->position = position;
     loadModel(path, bSmoothNormals);
 }
 
@@ -14,6 +15,15 @@ void Model::RenderModel(Shader& shader, const glm::mat4& model)
 {
     for (unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].RenderMesh(shader, model);
+}
+
+void Model::RenderModelMesh(Shader& shader, glm::mat4& model, int meshID, glm::mat4& meshModel)
+{
+    for (unsigned int i = 0; i < meshes.size(); i++)
+    {
+        if (i == meshID) meshes[i].RenderMesh(shader, meshModel);
+        else meshes[i].RenderMesh(shader, model);
+    }
 }
 
 void Model::loadModel(string const& path, bool bSmoothNormals)

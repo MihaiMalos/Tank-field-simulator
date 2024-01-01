@@ -9,6 +9,7 @@
 #include "Model.h"
 #include "SkyBox.h"
 
+unsigned int meshID = 0;
 
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
@@ -26,6 +27,7 @@ std::unique_ptr<Model> tankObj, helicopterObj;
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void ProcessKeyboard(GLFWwindow* window);
 
 void LoadObjects();
@@ -52,6 +54,7 @@ int main(int argc, char** argv)
 	glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
 	glfwSetCursorPosCallback(window, MouseCallback);
 	glfwSetScrollCallback(window, ScrollCallback);
+	glfwSetKeyCallback(window, KeyCallback);
 
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -194,12 +197,12 @@ void ProcessKeyboard(GLFWwindow* window)
 		pCamera->ProcessKeyboard(UP, deltaTime);
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 		pCamera->ProcessKeyboard(DOWN, deltaTime);
+		
 
 	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
 		int width, height;
 		glfwGetWindowSize(window, &width, &height);
 		pCamera->Reset(width, height);
-
 	}
 }
 
@@ -233,21 +236,42 @@ void LoadObjects()
 	// Objects loading
 	skyboxObj = std::make_unique<SkyBox>(skyboxTexture);
 	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
-	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false);
-	helicopterObj = std::make_unique<Model>("../Models/Helicopter/OH-58D.obj", false);
+	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false, glm::vec3(0, -0.8f, 0));
+	helicopterObj = std::make_unique<Model>("../Models/Helicopter/uh60.dae", false, glm::vec3(0, 0, 0));
 }
 
 void RenderScene(Shader& shader)
 {
 	glDisable(GL_CULL_FACE);
+
+	// Floor
 	floorObj->RenderMesh(shader);
-	glm::mat4 tankModel = glm::translate(glm::mat4(), glm::vec3(0, -0.8f, 0));
+
+	// Tank
+	glm::mat4 tankModel;
+	tankModel = glm::translate(tankModel, glm::vec3(0, -0.8f, 0));
 	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
 	tankObj->RenderModel(shader, tankModel);
 
-	glm::mat4 helicopterModel = glm::translate(glm::mat4(), glm::vec3(3, 3, 0));
-	//helicopterObj->RenderModel(shader, helicopterModel);
+	// Helicopter
+	glm::mat4 helicopterModel;
+	helicopterModel = glm::translate(helicopterModel, glm::vec3(0, 7, -5));
+	helicopterModel = glm::scale(helicopterModel, 0.4f * glm::vec3(1));
+	helicopterModel = glm::rotate(helicopterModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
+	helicopterModel = glm::rotate(helicopterModel, glm::radians(90.0f), glm::vec3(0, 0, 1));
+	glm::mat4 propellerModel = helicopterModel;
+	propellerModel = glm::rotate(helicopterModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
+	helicopterObj->RenderModelMesh(shader, helicopterModel, 10, propellerModel);
 
+}
+
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_P && action == GLFW_PRESS)
+	{
+		meshID++;
+		std::cout << meshID << std::endl;
+	}
 }
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height)

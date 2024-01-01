@@ -19,10 +19,11 @@ public:
     bool gammaCorrection;
 
     // constructor, expects a filepath to a 3D model.
-    Model(string const& path, bool bSmoothNormals, bool gamma = false);
+    Model(string const& path, bool bSmoothNormals, glm::vec3 position, bool gamma = false);
 
     // draws the model, and thus all its meshes
     void RenderModel(Shader& shader, const glm::mat4& model = glm::mat4(1));
+    void RenderModelMesh(Shader& shader, glm::mat4& model, int meshID, glm::mat4& meshModel);
 
 private:
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
@@ -36,5 +37,7 @@ private:
     // checks all material textures of a given type and loads the textures if they're not loaded yet.
     // the required info is returned as a Texture struct.
     vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName);
+
+    glm::vec3 position;
 };
 
