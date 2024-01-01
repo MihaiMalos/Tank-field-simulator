@@ -33,6 +33,9 @@
     <ClCompile Include="Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SkyBox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h">
@@ -53,6 +56,9 @@
     <ClInclude Include="Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SkyBox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="ShadowMapping.fs">
@@ -68,5 +74,11 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="Skybox.fs">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Skybox.vs">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

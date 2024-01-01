@@ -210,22 +210,23 @@ void LoadObjects()
 	Texture skyboxTexture({
 		"../Resources/Skybox/right.jpg",
 		"../Resources/Skybox/left.jpg",
-		"../Resources/Skybox/bottom.jpg",
 		"../Resources/Skybox/top.jpg",
+		"../Resources/Skybox/bottom.jpg",
 		"../Resources/Skybox/front.jpg",
 		"../Resources/Skybox/back.jpg"
 		});
 
 	// Positions loading
+	const float floorSize = 50.0f;
 	std::vector<Vertex> floorVertices({
 		// positions            // normals           // texcoords
-	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
-	   {-25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,    0.0f,  0.0f},
-	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
+	   { floorSize, 0.0f,  floorSize,  0.0f, 1.0f, 0.0f,    floorSize,  0.0f},
+	   {-floorSize, 0.0f,  floorSize,  0.0f, 1.0f, 0.0f,    0.0f,  0.0f},
+	   {-floorSize, 0.0f, -floorSize,  0.0f, 1.0f, 0.0f,    0.0f, floorSize},
 
-	   {25.0f, -0.5f,  25.0f,   0.0f, 1.0f, 0.0f,    25.0f,  0.0f},
-	   {-25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,    0.0f, 25.0f},
-	   {25.0f, -0.5f, -25.0f,   0.0f, 1.0f, 0.0f,    25.0f, 25.0f}
+	   { floorSize, 0.0f,  floorSize,  0.0f, 1.0f, 0.0f,    floorSize,  0.0f},
+	   {-floorSize, 0.0f, -floorSize,  0.0f, 1.0f, 0.0f,    0.0f, floorSize},
+	   { floorSize, 0.0f, -floorSize,  0.0f, 1.0f, 0.0f,    floorSize, floorSize}
 	});
 
 
@@ -234,16 +235,13 @@ void LoadObjects()
 	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
 	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false);
 	helicopterObj = std::make_unique<Model>("../Models/Helicopter/OH-58D.obj", false);
-
-
-
 }
 
 void RenderScene(Shader& shader)
 {
 	glDisable(GL_CULL_FACE);
 	floorObj->RenderMesh(shader);
-	glm::mat4 tankModel = glm::translate(glm::mat4(), glm::vec3(0, -1.3f, 0));
+	glm::mat4 tankModel = glm::translate(glm::mat4(), glm::vec3(0, -0.8f, 0));
 	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
 	tankObj->RenderModel(shader, tankModel);
 
