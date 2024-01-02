@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 
 	glewInit();
 
-	pCamera = std::make_unique<Camera>(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 1.0, 3.0));
+	pCamera = std::make_unique<Camera>(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 5.0, 30.0));
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -101,7 +101,7 @@ int main(int argc, char** argv)
 
 	LoadObjects();
 
-	glm::vec3 lightPos(0.0f, 3.0f, -0.5f);
+	glm::vec3 lightPos(0.0f, 20.0f, -0.01f);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -110,6 +110,8 @@ int main(int argc, char** argv)
 		float currentFrame = (float)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
+
+		lightPos = glm::vec3(0.0f, 20 * cos(currentFrame), 50 * sin(currentFrame));
 
 
 		// input
@@ -124,8 +126,8 @@ int main(int argc, char** argv)
 		// 1. render depth of scene to texture (from light's perspective)
 		glm::mat4 lightProjection, lightView;
 		glm::mat4 lightSpaceMatrix;
-		float near_plane = 1.0f, far_plane = 7.5f;
-		lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+		float near_plane = 10.0f, far_plane = 30.f;
+		lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, near_plane, far_plane);
 		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
 		lightSpaceMatrix = lightProjection * lightView;
 
@@ -249,14 +251,33 @@ void RenderScene(Shader& shader)
 	floorObj->RenderMesh(shader);
 
 	// Tank
+	float tankPosX = 25.0f - glfwGetTime() * 0.2f;
+	if (tankPosX <= 0) tankPosX = 0.0f;
 	glm::mat4 tankModel;
-	tankModel = glm::translate(tankModel, glm::vec3(0, -0.8f, 0));
+	tankModel = glm::translate(tankModel, glm::vec3(tankPosX, -0.8f, 0));
 	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
 	tankObj->RenderModel(shader, tankModel);
 
+	int tanksCounter = 5;
+	glm::mat4 firstHalfTanksModel, secondHalfTanksModel;
+	firstHalfTanksModel = secondHalfTanksModel = tankModel;
+
+	for (int count = 0; count < tanksCounter; count++)
+	{
+		firstHalfTanksModel = glm::translate(firstHalfTanksModel, glm::vec3(1.0f, 5.0f, 0.0f));
+		tankObj->RenderModel(shader, firstHalfTanksModel);
+	}
+
+	for (int count = 0; count < tanksCounter; count++)
+	{
+		secondHalfTanksModel = glm::translate(secondHalfTanksModel, glm::vec3(1.0f, -5.0f, 0.0f));
+		tankObj->RenderModel(shader, secondHalfTanksModel);
+	}
+
+
 	// Helicopter
 	glm::mat4 helicopterModel;
-	helicopterModel = glm::translate(helicopterModel, glm::vec3(0, 7, -5));
+	helicopterModel = glm::translate(helicopterModel, glm::vec3(25.0f + -glfwGetTime() * 0.6f, 7, -5));
 	helicopterModel = glm::scale(helicopterModel, 0.4f * glm::vec3(1));
 	helicopterModel = glm::rotate(helicopterModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
 	helicopterModel = glm::rotate(helicopterModel, glm::radians(90.0f), glm::vec3(0, 0, 1));
