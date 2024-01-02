@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 
 		RenderScene(shadowMappingShader);
 
-		float sunPassingTime = currentFrame * 0.01f;
+		float sunPassingTime = currentFrame * 0.1f;
 		lightPos = glm::vec3(0.0f, 20 * cos(sunPassingTime), 50 * sin(sunPassingTime));
 		hue = std::max<float>(cos(sunPassingTime), 0.1);
 		floorHue = std::max<float>(1.0f, std::min<float>(0.8, cos(sunPassingTime)));
@@ -256,7 +256,7 @@ void LoadObjects()
 	// Objects loading
 	skyboxObj = std::make_unique<SkyBox>(skyboxTexture);
 	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
-	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false, glm::vec3(0, -0.8f, 0));
+	tankObj = std::make_unique<Model>("../Models/Tank/IS.obj", false, glm::vec3(0, -0.8f, 0));
 	helicopterObj = std::make_unique<Model>("../Models/Helicopter/uh60.dae", false, glm::vec3(0, 0, 0));
 	sunObj = std::make_unique<Model>("../Models/Sun/13913_Sun_v2_l3.obj", false, glm::vec3(0, 0, 0));
 }
@@ -268,6 +268,7 @@ void RenderScene(Shader& shader)
 	// Floor
 	floorObj->RenderMesh(shader);
 
+	// Teams
 	RenderTeam(tankObj.get(), helicopterObj.get(), shader, false);
 	RenderTeam(tankObj.get(), helicopterObj.get(), shader, true);
 
@@ -276,24 +277,24 @@ void RenderScene(Shader& shader)
 void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 {
 	// Constants
-	const float startingPoint = 35.0f;
-	const float intersectionPoint = 12.0f;
+	const float startingPoint = 15.0f;
+	const float intersectionPoint = 5.0f;
 	const float tankAcceleration = 0.2f;
 	const float helicopterAcceleration = 0.6f;
 	const int tanksCounter = 4;
 	const int helicopterCounter = 2;
+	const float initPosition = enemyTeam ? -startingPoint : startingPoint;
 
 	// Tanks
-	float tankPosX = enemyTeam 
-		? -startingPoint + glfwGetTime() 
-		: startingPoint - glfwGetTime();
-	if (enemyTeam && tankPosX >= -intersectionPoint) tankPosX = -intersectionPoint;
-	else if (!enemyTeam && tankPosX <= intersectionPoint) tankPosX = intersectionPoint;
+	float tankPosX = (enemyTeam ? glfwGetTime() : -glfwGetTime()) * tankAcceleration;
+	if (enemyTeam && initPosition + tankPosX >= -intersectionPoint) tankPosX = -intersectionPoint - initPosition;
+	else if (!enemyTeam && initPosition + tankPosX <= intersectionPoint) tankPosX = intersectionPoint - initPosition;
 
 	glm::mat4 tankModel;
-	tankModel = glm::translate(tankModel, glm::vec3(tankPosX * tankAcceleration, -0.8f, 0));
-	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
-	if (enemyTeam) tankModel = glm::rotate(tankModel, glm::radians(180.0f), glm::vec3(0, 0, 1));
+	tankModel = glm::translate(tankModel, glm::vec3(initPosition + tankPosX, 0, 0));
+	tankModel = glm::scale(tankModel, 0.5f * glm::vec3(1));
+	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(0, 1, 0));
+	if (enemyTeam) tankModel = glm::rotate(tankModel, glm::radians(180.0f), glm::vec3(0, 1, 0));
 	tankObj->RenderModel(shader, tankModel);
 
 	glm::mat4 firstHalfTanksModel, secondHalfTanksModel;
@@ -301,23 +302,21 @@ void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 
 	for (int count = 0; count < tanksCounter; count++)
 	{
-		firstHalfTanksModel = glm::translate(firstHalfTanksModel, glm::vec3(.5f, 5.0f, 0.0f));
-		secondHalfTanksModel = glm::translate(secondHalfTanksModel, glm::vec3(.5f, -5.0f, 0.0f));
+		firstHalfTanksModel = glm::translate(firstHalfTanksModel, glm::vec3(8.0f, 0.0f, -1.0f));
+		secondHalfTanksModel = glm::translate(secondHalfTanksModel, glm::vec3(-8.0f, 0.0f, -1.0f));
 		tankObj->RenderModel(shader, firstHalfTanksModel);
 		tankObj->RenderModel(shader, secondHalfTanksModel);
 	}
 
 	// Helicopter
-	float helicopterPosX = enemyTeam
-		? -startingPoint + glfwGetTime()
-		: startingPoint - glfwGetTime();
+	float helicopterPosX = (enemyTeam ? glfwGetTime() : -glfwGetTime()) * helicopterAcceleration;
 
-	if (enemyTeam && helicopterPosX >= -intersectionPoint) helicopterPosX = -intersectionPoint;
-	else if (!enemyTeam && helicopterPosX <= intersectionPoint) helicopterPosX = intersectionPoint;
+	if (enemyTeam && initPosition + helicopterPosX >= -intersectionPoint) helicopterPosX = -intersectionPoint - initPosition;
+	else if (!enemyTeam && initPosition + helicopterPosX <= intersectionPoint) helicopterPosX = intersectionPoint - initPosition;
 
 	// Helicopter transformations
 	glm::mat4 helicopterModel;
-	helicopterModel = glm::translate(helicopterModel, glm::vec3(helicopterPosX * helicopterAcceleration, 7, 0));
+	helicopterModel = glm::translate(helicopterModel, glm::vec3(initPosition + helicopterPosX, 7, 0));
 	helicopterModel = glm::scale(helicopterModel, 0.4f * glm::vec3(1));
 	helicopterModel = glm::rotate(helicopterModel, glm::radians(270.0f), glm::vec3(1, 0, 0));
 	helicopterModel = glm::rotate(helicopterModel, glm::radians(enemyTeam ? 270.0f : 90.0f), glm::vec3(0, 0, 1));
