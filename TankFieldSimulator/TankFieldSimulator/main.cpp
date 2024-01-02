@@ -102,6 +102,8 @@ int main(int argc, char** argv)
 	LoadObjects();
 
 	glm::vec3 lightPos(0.0f, 20.0f, -0.01f);
+	float hue = 1.0;
+	float floorHue = 0.9;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -112,7 +114,8 @@ int main(int argc, char** argv)
 		lastFrame = currentFrame;
 
 		lightPos = glm::vec3(0.0f, 20 * cos(currentFrame), 50 * sin(currentFrame));
-
+		hue = std::max<float>(cos(currentFrame), 0.05);
+		floorHue = std::max<float>(0.4, std::min<float>(0.8, cos(currentFrame)));
 
 		// input
 		// -----
@@ -157,6 +160,7 @@ int main(int argc, char** argv)
 		glm::mat4 view = pCamera->GetViewMatrix();
 		shadowMappingShader.SetMat4("projection", projection);
 		shadowMappingShader.SetMat4("view", view);
+		shadowMappingShader.SetFloat("hue", hue + 0.3);
 
 
 		// set light uniforms
@@ -172,6 +176,7 @@ int main(int argc, char** argv)
 		skyboxShader.Use();
 		skyboxShader.SetMat4("projection", projection);
 		skyboxShader.SetMat4("view", glm::mat4(glm::mat3(pCamera->GetViewMatrix())));
+		skyboxShader.SetFloat("hue", hue);
 		skyboxObj->Render(skyboxShader);
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
