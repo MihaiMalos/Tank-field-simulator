@@ -22,7 +22,7 @@ const unsigned int SCR_HEIGHT = 800;
 std::unique_ptr<Camera> pCamera;
 std::unique_ptr<Mesh> floorObj;
 std::unique_ptr<SkyBox> skyboxObj;
-std::unique_ptr<Model> tankObj, helicopterObj;
+std::unique_ptr<Model> tankObj, helicopterObj, sunObj;
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
@@ -113,9 +113,10 @@ int main(int argc, char** argv)
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		lightPos = glm::vec3(0.0f, 20 * cos(currentFrame), 50 * sin(currentFrame));
-		hue = std::max<float>(cos(currentFrame), 0.05);
-		floorHue = std::max<float>(0.4, std::min<float>(0.8, cos(currentFrame)));
+		float sunPassingTime = currentFrame * 0.01f;
+		lightPos = glm::vec3(0.0f, 20 * cos(sunPassingTime), 50 * sin(sunPassingTime));
+		hue = std::max<float>(cos(sunPassingTime), 0.15);
+		floorHue = std::max<float>(1.0f, std::min<float>(0.8, cos(sunPassingTime)));
 
 		// input
 		// -----
@@ -129,7 +130,7 @@ int main(int argc, char** argv)
 		// 1. render depth of scene to texture (from light's perspective)
 		glm::mat4 lightProjection, lightView;
 		glm::mat4 lightSpaceMatrix;
-		float near_plane = 10.0f, far_plane = 30.f;
+		float near_plane = 5.0f, far_plane = 30.f;
 		lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, near_plane, far_plane);
 		lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
 		lightSpaceMatrix = lightProjection * lightView;
@@ -173,11 +174,20 @@ int main(int argc, char** argv)
 
 		RenderScene(shadowMappingShader);
 
+		glm::mat4 sunModel = glm::mat4();
+		sunModel = glm::translate(sunModel, lightPos);
+		sunModel = glm::scale(sunModel, 0.004f * glm::vec3(1));
+		sunObj->RenderModel(shadowMappingShader, sunModel);
+		sunObj->RenderModel(shadowMappingDepthShader, sunModel);
+
 		skyboxShader.Use();
 		skyboxShader.SetMat4("projection", projection);
 		skyboxShader.SetMat4("view", glm::mat4(glm::mat3(pCamera->GetViewMatrix())));
 		skyboxShader.SetFloat("hue", hue);
+		skyboxShader.SetFloat("time", currentFrame);
 		skyboxObj->Render(skyboxShader);
+
+
 
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		glfwSwapBuffers(window);
@@ -246,6 +256,7 @@ void LoadObjects()
 	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
 	tankObj = std::make_unique<Model>("../Models/Tank/tank.obj", false, glm::vec3(0, -0.8f, 0));
 	helicopterObj = std::make_unique<Model>("../Models/Helicopter/uh60.dae", false, glm::vec3(0, 0, 0));
+	sunObj = std::make_unique<Model>("../Models/Sun/13913_Sun_v2_l3.obj", false, glm::vec3(0, 0, 0));
 }
 
 void RenderScene(Shader& shader)
