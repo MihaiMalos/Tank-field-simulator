@@ -287,8 +287,8 @@ void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 	const float startingPoint = 15.0f;
 	const float intersectionPoint = 5.0f;
 	const float tankAcceleration = 0.2f;
-	const float helicopterAcceleration = 0.6f;
-	const int tanksCounter = 4;
+	const float helicopterAcceleration = 1.6f;
+	const int tanksCounter = 6;
 	const int helicopterCounter = 2;
 	const float initPosition = enemyTeam ? -startingPoint : startingPoint;
 
@@ -345,6 +345,11 @@ void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 	helicopterObj->RenderModelMesh(shader, firstHalfHelicoptersModel, 10, firstHalfPropellerModel);
 
 	secondHalfHelicoptersModel = glm::translate(secondHalfHelicoptersModel, glm::vec3(-30.0f, -10.0f, 0.0f));
+	secondHalfPropellerModel = secondHalfHelicoptersModel;
+	secondHalfPropellerModel = glm::rotate(secondHalfPropellerModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
+	helicopterObj->RenderModelMesh(shader, secondHalfHelicoptersModel, 10, secondHalfPropellerModel);
+
+	secondHalfHelicoptersModel = glm::translate(secondHalfHelicoptersModel, glm::vec3(50.0f, -10.0f, 0.0f));
 	secondHalfPropellerModel = secondHalfHelicoptersModel;
 	secondHalfPropellerModel = glm::rotate(secondHalfPropellerModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
 	helicopterObj->RenderModelMesh(shader, secondHalfHelicoptersModel, 10, secondHalfPropellerModel);
