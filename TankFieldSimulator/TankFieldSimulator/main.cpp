@@ -22,7 +22,7 @@ const unsigned int SCR_HEIGHT = 800;
 std::unique_ptr<Camera> pCamera;
 std::unique_ptr<Mesh> floorObj;
 std::unique_ptr<SkyBox> skyboxObj;
-std::unique_ptr<Model> tankObj, helicopterObj, sunObj;
+std::unique_ptr<Model> tankObj, helicopterObj, sunObj, moonObj;
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 		glm::mat4 view = pCamera->GetViewMatrix();
 		shadowMappingShader.SetMat4("projection", projection);
 		shadowMappingShader.SetMat4("view", view);
-		shadowMappingShader.SetFloat("hue", hue + 0.3);
+		shadowMappingShader.SetFloat("hue", floorHue);
 
 
 		// set light uniforms
@@ -171,22 +171,27 @@ int main(int argc, char** argv)
 
 		RenderScene(shadowMappingShader);
 
-		float sunPassingTime = currentFrame * 0.1f;
+		float sunPassingTime = currentFrame * 0.3f;
 		lightPos = glm::vec3(0.0f, 20 * cos(sunPassingTime), 50 * sin(sunPassingTime));
 		hue = std::max<float>(cos(sunPassingTime), 0.1);
-		floorHue = std::max<float>(1.0f, std::min<float>(0.8, cos(sunPassingTime)));
+		floorHue = std::max<float>(cos(sunPassingTime), 0.6);
 
 		glm::mat4 sunModel = glm::mat4();
 		sunModel = glm::translate(sunModel, lightPos);
 		sunModel = glm::scale(sunModel, 0.004f * glm::vec3(1));
 		sunObj->RenderModel(shadowMappingShader, sunModel);
 		sunObj->RenderModel(shadowMappingDepthShader, sunModel);
+
+		glm::mat4 moonModel = glm::mat4();
+		moonModel = glm::translate(moonModel, -lightPos);
+		moonModel = glm::scale(moonModel, 3.0f * glm::vec3(1));
+		moonObj->RenderModel(shadowMappingShader, moonModel);
+		moonObj->RenderModel(shadowMappingDepthShader, moonModel);
 		
 		skyboxShader.Use();
 		skyboxShader.SetMat4("projection", projection);
 		skyboxShader.SetMat4("view", glm::mat4(glm::mat3(pCamera->GetViewMatrix())));
 		skyboxShader.SetFloat("hue", hue);
-		skyboxShader.SetFloat("time", currentFrame);
 		skyboxObj->Render(skyboxShader);
 	
 
@@ -259,6 +264,7 @@ void LoadObjects()
 	tankObj = std::make_unique<Model>("../Models/Tank/IS.obj", false, glm::vec3(0, -0.8f, 0));
 	helicopterObj = std::make_unique<Model>("../Models/Helicopter/uh60.dae", false, glm::vec3(0, 0, 0));
 	sunObj = std::make_unique<Model>("../Models/Sun/13913_Sun_v2_l3.obj", false, glm::vec3(0, 0, 0));
+	moonObj = std::make_unique<Model>("../Models/Moon/moon.obj", false, glm::vec3(0, 0, 0));
 }
 
 void RenderScene(Shader& shader)
