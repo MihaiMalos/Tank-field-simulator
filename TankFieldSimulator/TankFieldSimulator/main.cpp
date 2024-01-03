@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 
 		RenderScene(shadowMappingShader);
 
-		float sunPassingTime = currentFrame * 0.3f;
+		float sunPassingTime = currentFrame * 0.01f;
 		lightPos = glm::vec3(0.0f, 20 * cos(sunPassingTime), 50 * sin(sunPassingTime));
 		hue = std::max<float>(cos(sunPassingTime), 0.1);
 		floorHue = std::max<float>(cos(sunPassingTime), 0.6);
@@ -192,6 +192,7 @@ int main(int argc, char** argv)
 		skyboxShader.SetMat4("projection", projection);
 		skyboxShader.SetMat4("view", glm::mat4(glm::mat3(pCamera->GetViewMatrix())));
 		skyboxShader.SetFloat("hue", hue);
+		skyboxShader.SetFloat("time", currentFrame);
 		skyboxObj->Render(skyboxShader);
 	
 
