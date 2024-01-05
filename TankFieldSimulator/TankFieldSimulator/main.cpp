@@ -9,20 +9,19 @@
 #include "Model.h"
 #include "SkyBox.h"
 
-unsigned int meshID = 0;
-
 #pragma comment (lib, "glfw3dll.lib")
 #pragma comment (lib, "glew32.lib")
 #pragma comment (lib, "OpenGL32.lib")
 
 // settings
-const unsigned int SCR_WIDTH = 1000;
-const unsigned int SCR_HEIGHT = 800;
+const unsigned int SCR_WIDTH = 2560;
+const unsigned int SCR_HEIGHT = 1440;
 
 std::unique_ptr<Camera> pCamera;
 std::unique_ptr<Mesh> floorObj;
 std::unique_ptr<SkyBox> skyboxObj;
-std::unique_ptr<Model> tankObj, helicopterObj, sunObj, moonObj;
+std::unique_ptr<Model> tankObj, helicopterObj, sunObj, moonObj, enemyTankObj;
+float timeAcceleration = 0.1f;
 
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void MouseCallback(GLFWwindow* window, double xpos, double ypos);
@@ -45,7 +44,7 @@ int main(int argc, char** argv)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Tank Field Simulator", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Tank Field Simulator", glfwGetPrimaryMonitor(), NULL);
 	
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -63,9 +62,11 @@ int main(int argc, char** argv)
 
 	glewInit();
 
-	pCamera = std::make_unique<Camera>(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 5.0, 30.0));
+	pCamera = std::make_unique<Camera>(SCR_WIDTH, SCR_HEIGHT, glm::vec3(0.0, 5.0, -30.0));
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	Shader shadowMappingShader("ShadowMapping.vs", "ShadowMapping.fs");
 	Shader shadowMappingDepthShader("ShadowMappingDepth.vs", "ShadowMappingDepth.fs");
@@ -171,10 +172,10 @@ int main(int argc, char** argv)
 
 		RenderScene(shadowMappingShader);
 
-		float sunPassingTime = currentFrame * 0.01f;
-		lightPos = glm::vec3(0.0f, 20 * cos(sunPassingTime), 50 * sin(sunPassingTime));
-		hue = std::max<float>(cos(sunPassingTime), 0.1);
-		floorHue = std::max<float>(cos(sunPassingTime), 0.6);
+		float sunPassingTime = currentFrame * timeAcceleration;
+		lightPos = glm::vec3(0.0f, 20 * sin(sunPassingTime), 50 * cos(sunPassingTime));
+		hue = std::max<float>(sin(sunPassingTime), 0.1);
+		floorHue = std::max<float>(sin(sunPassingTime), 0.6);
 
 		glm::mat4 sunModel = glm::mat4();
 		sunModel = glm::translate(sunModel, lightPos);
@@ -263,6 +264,7 @@ void LoadObjects()
 	skyboxObj = std::make_unique<SkyBox>(skyboxTexture);
 	floorObj = std::make_unique<Mesh>(floorVertices, std::vector<unsigned int>(), std::vector<Texture>{floorTexture});
 	tankObj = std::make_unique<Model>("../Models/Tank/IS.obj", false, glm::vec3(0, -0.8f, 0));
+	enemyTankObj = std::make_unique<Model>("../Models/Tank2/Tiger_I.obj", false, glm::vec3(0, -0.8f, 0));
 	helicopterObj = std::make_unique<Model>("../Models/Helicopter/uh60.dae", false, glm::vec3(0, 0, 0));
 	sunObj = std::make_unique<Model>("../Models/Sun/13913_Sun_v2_l3.obj", false, glm::vec3(0, 0, 0));
 	moonObj = std::make_unique<Model>("../Models/Moon/moon.obj", false, glm::vec3(0, 0, 0));
@@ -277,18 +279,18 @@ void RenderScene(Shader& shader)
 
 	// Teams
 	RenderTeam(tankObj.get(), helicopterObj.get(), shader, false);
-	RenderTeam(tankObj.get(), helicopterObj.get(), shader, true);
+	RenderTeam(enemyTankObj.get(), helicopterObj.get(), shader, true);
 
 }
 
 void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 {
 	// Constants
-	const float startingPoint = 15.0f;
+	const float startingPoint = 25.0f;
 	const float intersectionPoint = 5.0f;
 	const float tankAcceleration = 0.2f;
-	const float helicopterAcceleration = 1.6f;
-	const int tanksCounter = 6;
+	const float helicopterAcceleration = 0.4f;
+	const int tanksCounter = 5;
 	const int helicopterCounter = 2;
 	const float initPosition = enemyTeam ? -startingPoint : startingPoint;
 
@@ -302,7 +304,7 @@ void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 	tankModel = glm::scale(tankModel, 0.5f * glm::vec3(1));
 	tankModel = glm::rotate(tankModel, glm::radians(270.0f), glm::vec3(0, 1, 0));
 	if (enemyTeam) tankModel = glm::rotate(tankModel, glm::radians(180.0f), glm::vec3(0, 1, 0));
-	tankObj->RenderModel(shader, tankModel);
+	tank->RenderModel(shader, tankModel);
 
 	glm::mat4 firstHalfTanksModel, secondHalfTanksModel;
 	firstHalfTanksModel = secondHalfTanksModel = tankModel;
@@ -311,8 +313,8 @@ void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 	{
 		firstHalfTanksModel = glm::translate(firstHalfTanksModel, glm::vec3(8.0f, 0.0f, -1.0f));
 		secondHalfTanksModel = glm::translate(secondHalfTanksModel, glm::vec3(-8.0f, 0.0f, -1.0f));
-		tankObj->RenderModel(shader, firstHalfTanksModel);
-		tankObj->RenderModel(shader, secondHalfTanksModel);
+		tank->RenderModel(shader, firstHalfTanksModel);
+		tank->RenderModel(shader, secondHalfTanksModel);
 	}
 
 	// Helicopter
@@ -333,7 +335,7 @@ void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 	topPropellerModel = glm::rotate(topPropellerModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
 
 	// Render helicopter with the rotation
-	helicopterObj->RenderModelMesh(shader, helicopterModel, 10, topPropellerModel);	
+	helicopter->RenderModelMesh(shader, helicopterModel, 10, topPropellerModel);	
 
 	glm::mat4 firstHalfHelicoptersModel, secondHalfHelicoptersModel, firstHalfPropellerModel, secondHalfPropellerModel;
 	firstHalfHelicoptersModel = secondHalfHelicoptersModel = helicopterModel;
@@ -342,25 +344,19 @@ void RenderTeam(Model* tank, Model* helicopter, Shader& shader, bool enemyTeam)
 	firstHalfHelicoptersModel = glm::translate(firstHalfHelicoptersModel, glm::vec3(30.0f, -10.0f, 0.0f));
 	firstHalfPropellerModel = firstHalfHelicoptersModel;
 	firstHalfPropellerModel = glm::rotate(firstHalfPropellerModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
-	helicopterObj->RenderModelMesh(shader, firstHalfHelicoptersModel, 10, firstHalfPropellerModel);
+	helicopter->RenderModelMesh(shader, firstHalfHelicoptersModel, 10, firstHalfPropellerModel);
 
 	secondHalfHelicoptersModel = glm::translate(secondHalfHelicoptersModel, glm::vec3(-30.0f, -10.0f, 0.0f));
 	secondHalfPropellerModel = secondHalfHelicoptersModel;
 	secondHalfPropellerModel = glm::rotate(secondHalfPropellerModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
-	helicopterObj->RenderModelMesh(shader, secondHalfHelicoptersModel, 10, secondHalfPropellerModel);
-
-	secondHalfHelicoptersModel = glm::translate(secondHalfHelicoptersModel, glm::vec3(50.0f, -10.0f, 0.0f));
-	secondHalfPropellerModel = secondHalfHelicoptersModel;
-	secondHalfPropellerModel = glm::rotate(secondHalfPropellerModel, glm::radians(1000 * (float)glfwGetTime()), glm::vec3(0, 0, 1));
-	helicopterObj->RenderModelMesh(shader, secondHalfHelicoptersModel, 10, secondHalfPropellerModel);
+	helicopter->RenderModelMesh(shader, secondHalfHelicoptersModel, 10, secondHalfPropellerModel);
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	{
-		meshID++;
-		std::cout << meshID << std::endl;
+		timeAcceleration += 0.05f;
 	}
 }
 
